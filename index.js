@@ -2,6 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const crypto = require("crypto");
+const ai = require("./ai");
 
 const app = express();
 const PORT = 3021;
@@ -284,6 +285,35 @@ function seedDemo() {
   
   predictions.set(demoMarket.id, demoMarket);
 }
+
+// AI-powered endpoints
+app.post("/api/ai/analyze-meme", async (req, res) => {
+  try {
+    const { symbol } = req.body;
+    const coin = memeCoins.get(symbol);
+    if (!coin) return res.status(404).json({ error: "Coin not found. Try GET /api/memes/trending first" });
+    const analysis = await ai.analyzeMeme(coin);
+    res.json({ success: true, symbol, analysis });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/ai/rug-check/:symbol", async (req, res) => {
+  try {
+    const coin = memeCoins.get(req.params.symbol);
+    if (!coin) return res.status(404).json({ error: "Coin not found" });
+    const rugCheck = await ai.rugCheck(coin);
+    res.json({ success: true, symbol: req.params.symbol, rugCheck });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get("/api/ai/market-analysis/:marketId", async (req, res) => {
+  try {
+    const market = predictions.get(req.params.marketId);
+    if (!market) return res.status(404).json({ error: "Market not found" });
+    const analysis = await ai.predictMarket(market.question, market.pools, market.predictions.length);
+    res.json({ success: true, marketId: req.params.marketId, analysis });
+  } catch (e) { res.status(500).json({ error: e.message }); }
+});
 
 seedDemo();
 
